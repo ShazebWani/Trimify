@@ -12,7 +12,7 @@ import { Users, Calendar, Clock, DollarSign, Plus, CreditCard, Star } from "luci
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -70,7 +70,9 @@ export default function Dashboard() {
         {/* Dashboard Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard</h1>
-          <p className="text-gray-600">Welcome back! Here's what's happening at your barbershop today.</p>
+          <p className="text-gray-600">
+            Welcome back! Here's what's happening at {user?.barbershopName || 'your barbershop'} today.
+          </p>
         </div>
 
         {/* Quick Stats */}

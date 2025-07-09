@@ -49,8 +49,18 @@ export default function Navigation() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
-                <Scissors className="h-6 w-6 text-primary mr-3" />
-                <span className="text-xl font-bold text-gray-900">Trimify</span>
+                {user?.logoUrl ? (
+                  <img 
+                    src={user.logoUrl} 
+                    alt={user.barbershopName || 'Logo'} 
+                    className="h-8 w-8 object-contain mr-3"
+                  />
+                ) : (
+                  <Scissors className="h-6 w-6 text-primary mr-3" />
+                )}
+                <span className="text-xl font-bold text-gray-900">
+                  {user?.barbershopName || 'Trimify'}
+                </span>
                 <Badge variant="secondary" className="ml-2">Pro</Badge>
               </div>
             </div>
@@ -59,13 +69,13 @@ export default function Navigation() {
             <div className="hidden md:flex items-center space-x-8">
               {navigation.map((item) => (
                 <Link key={item.name} href={item.href}>
-                  <a className={`font-medium transition-colors ${
+                  <div className={`font-medium transition-colors cursor-pointer ${
                     isActiveRoute(item.href) 
                       ? 'text-primary' 
                       : 'text-gray-600 hover:text-primary'
                   }`}>
                     {item.name}
-                  </a>
+                  </div>
                 </Link>
               ))}
             </div>

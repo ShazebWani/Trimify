@@ -51,9 +51,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Apply theme when user data loads
   useEffect(() => {
     if (user?.primaryColor && user?.secondaryColor) {
+      console.log('Applying theme:', user.primaryColor, user.secondaryColor);
       applyTheme(user.primaryColor, user.secondaryColor);
     }
-  }, [user]);
+  }, [user?.primaryColor, user?.secondaryColor]);
 
   return (
     <ThemeContext.Provider value={{ primaryColor, secondaryColor, applyTheme }}>
