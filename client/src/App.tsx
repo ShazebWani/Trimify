@@ -12,14 +12,17 @@ import Customers from "@/pages/customers";
 import Gallery from "@/pages/gallery";
 import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
+import Onboarding from "@/pages/onboarding";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   return (
     <Switch>
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
+      ) : !user?.isOnboarded ? (
+        <Route path="/" component={Onboarding} />
       ) : (
         <>
           <Route path="/" component={Dashboard} />

@@ -8,6 +8,7 @@ import {
   gallery,
   transactions,
   transactionItems,
+  barbers,
   type User,
   type UpsertUser,
   type Customer,
@@ -25,6 +26,9 @@ import {
   type Transaction,
   type InsertTransaction,
   type TransactionItem,
+  type Barber,
+  type InsertBarber,
+  type OnboardingData,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, count } from "drizzle-orm";
@@ -86,6 +90,17 @@ export interface IStorage {
     averageWaitTime: number;
     todayRevenue: number;
   }>;
+
+  // Barber operations
+  getBarbers(userId: string): Promise<Barber[]>;
+  getBarber(id: number): Promise<Barber | undefined>;
+  createBarber(barber: InsertBarber, userId: string): Promise<Barber>;
+  updateBarber(id: number, barber: Partial<InsertBarber>): Promise<Barber>;
+  deleteBarber(id: number): Promise<void>;
+
+  // Onboarding operations
+  completeOnboarding(userId: string, data: OnboardingData): Promise<User>;
+  generateSubdomain(businessName: string): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -427,6 +442,97 @@ export class DatabaseStorage implements IStorage {
       averageWaitTime: Math.round(averageWaitTime),
       todayRevenue,
     };
+  }
+
+  // Barber operations
+  async getBarbers(userId: string): Promise<Barber[]> {
+    return await db
+      .select()
+      .from(barbers)
+      .where(eq(barbers.userId, userId))
+      .orderBy(asc(barbers.name));
+  }
+
+  async getBarber(id: number): Promise<Barber | undefined> {
+    const [barber] = await db.select().from(barbers).where(eq(barbers.id, id));
+    return barber;
+  }
+
+  async createBarber(barber: InsertBarber, userId: string): Promise<Barber> {
+    const [newBarber] = await db
+      .insert(barbers)
+      .values({ ...barber, userId })
+      .returning();
+    return newBarber;
+  }
+
+  async updateBarber(id: number, barber: Partial<InsertBarber>): Promise<Barber> {
+    const [updatedBarber] = await db
+      .update(barbers)
+      .set(barber)
+      .where(eq(barbers.id, id))
+      .returning();
+    return updatedBarber;
+  }
+
+  async deleteBarber(id: number): Promise<void> {
+    await db.delete(barbers).where(eq(barbers.id, id));
+  }
+
+  // Onboarding operations
+  async completeOnboarding(userId: string, data: OnboardingData): Promise<User> {
+    const subdomain = await this.generateSubdomain(data.barbershopName);
+    
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        barbershopName: data.barbershopName,
+        address: data.address,
+        phone: data.phone,
+        subdomain,
+        primaryColor: data.primaryColor,
+        secondaryColor: data.secondaryColor,
+        bookingStyle: data.bookingStyle,
+        logoUrl: data.logoUrl,
+        businessHours: data.businessHours,
+        isOnboarded: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    // Create barbers
+    for (const barberData of data.barbers) {
+      await this.createBarber(barberData, userId);
+    }
+
+    return updatedUser;
+  }
+
+  async generateSubdomain(businessName: string): Promise<string> {
+    const baseSubdomain = businessName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 20);
+    
+    let subdomain = baseSubdomain;
+    let counter = 1;
+    
+    while (true) {
+      const [existing] = await db
+        .select()
+        .from(users)
+        .where(eq(users.subdomain, subdomain));
+      
+      if (!existing) {
+        break;
+      }
+      
+      subdomain = `${baseSubdomain}${counter}`;
+      counter++;
+    }
+    
+    return subdomain;
   }
 }
 

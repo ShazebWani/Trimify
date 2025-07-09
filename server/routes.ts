@@ -9,7 +9,9 @@ import {
   insertQueueSchema, 
   insertReviewSchema, 
   insertGallerySchema,
-  insertTransactionSchema 
+  insertTransactionSchema,
+  insertBarberSchema,
+  onboardingSchema 
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -356,6 +358,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating transaction:", error);
       res.status(500).json({ message: "Failed to create transaction" });
+    }
+  });
+
+  // Barber routes
+  app.get('/api/barbers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const barbers = await storage.getBarbers(userId);
+      res.json(barbers);
+    } catch (error) {
+      console.error("Error fetching barbers:", error);
+      res.status(500).json({ message: "Failed to fetch barbers" });
+    }
+  });
+
+  app.post('/api/barbers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const barberData = insertBarberSchema.parse(req.body);
+      const barber = await storage.createBarber(barberData, userId);
+      res.json(barber);
+    } catch (error) {
+      console.error("Error creating barber:", error);
+      res.status(500).json({ message: "Failed to create barber" });
+    }
+  });
+
+  app.put('/api/barbers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const barberId = parseInt(req.params.id);
+      const barberData = insertBarberSchema.partial().parse(req.body);
+      const barber = await storage.updateBarber(barberId, barberData);
+      res.json(barber);
+    } catch (error) {
+      console.error("Error updating barber:", error);
+      res.status(500).json({ message: "Failed to update barber" });
+    }
+  });
+
+  app.delete('/api/barbers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const barberId = parseInt(req.params.id);
+      await storage.deleteBarber(barberId);
+      res.json({ message: "Barber deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting barber:", error);
+      res.status(500).json({ message: "Failed to delete barber" });
+    }
+  });
+
+  // Onboarding routes
+  app.post('/api/onboarding', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const onboardingData = onboardingSchema.parse(req.body);
+      const user = await storage.completeOnboarding(userId, onboardingData);
+      res.json(user);
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
+  app.get('/api/onboarding/subdomain-check', isAuthenticated, async (req: any, res) => {
+    try {
+      const businessName = req.query.businessName as string;
+      const subdomain = await storage.generateSubdomain(businessName);
+      res.json({ subdomain });
+    } catch (error) {
+      console.error("Error generating subdomain:", error);
+      res.status(500).json({ message: "Failed to generate subdomain" });
     }
   });
 

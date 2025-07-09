@@ -92,11 +92,11 @@ export default function Navigation() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings">Profile Settings</Link>
+                  <DropdownMenuItem onClick={() => window.location.href = '/settings'}>
+                    Profile Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout">Sign Out</a>
+                  <DropdownMenuItem onClick={() => window.location.href = '/api/logout'}>
+                    Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -122,8 +122,8 @@ export default function Navigation() {
                 const Icon = item.icon;
                 return (
                   <Link key={item.name} href={item.href}>
-                    <a 
-                      className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                    <div 
+                      className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors cursor-pointer ${
                         isActiveRoute(item.href) 
                           ? 'text-primary bg-blue-50' 
                           : 'text-gray-600 hover:text-primary hover:bg-gray-50'
@@ -132,7 +132,7 @@ export default function Navigation() {
                     >
                       <Icon className="h-5 w-5 mr-3" />
                       {item.name}
-                    </a>
+                    </div>
                   </Link>
                 );
               })}
@@ -148,12 +148,12 @@ export default function Navigation() {
             const Icon = item.icon;
             return (
               <Link key={item.name} href={item.href}>
-                <a className={`flex flex-col items-center py-2 px-3 ${
+                <div className={`flex flex-col items-center py-2 px-3 cursor-pointer ${
                   isActiveRoute(item.href) ? 'text-primary' : 'text-gray-600'
                 }`}>
                   <Icon className="h-5 w-5" />
                   <span className="text-xs mt-1">{item.name}</span>
-                </a>
+                </div>
               </Link>
             );
           })}

@@ -36,6 +36,13 @@ export const users = pgTable("users", {
   barbershopName: varchar("barbershop_name"),
   phone: varchar("phone"),
   address: text("address"),
+  subdomain: varchar("subdomain").unique(),
+  primaryColor: varchar("primary_color").default("#3b82f6"),
+  secondaryColor: varchar("secondary_color").default("#1e40af"),
+  bookingStyle: varchar("booking_style").default("both"), // appointment, walk-in, both
+  logoUrl: varchar("logo_url"),
+  businessHours: jsonb("business_hours"),
+  isOnboarded: boolean("is_onboarded").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -140,6 +147,23 @@ export const transactionItems = pgTable("transaction_items", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
 });
 
+// Barbers table
+export const barbers = pgTable("barbers", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  name: varchar("name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  profileImageUrl: varchar("profile_image_url"),
+  specialties: text("specialties").array().default([]),
+  bio: text("bio"),
+  experience: integer("experience"), // years of experience
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   customers: many(customers),
@@ -149,6 +173,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   reviews: many(reviews),
   gallery: many(gallery),
   transactions: many(transactions),
+  barbers: many(barbers),
 }));
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
@@ -202,6 +227,10 @@ export const transactionItemsRelations = relations(transactionItems, ({ one }) =
   service: one(services, { fields: [transactionItems.serviceId], references: [services.id] }),
 }));
 
+export const barbersRelations = relations(barbers, ({ one }) => ({
+  user: one(users, { fields: [barbers.userId], references: [users.id] }),
+}));
+
 // Zod schemas
 export const upsertUserSchema = createInsertSchema(users);
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
@@ -211,6 +240,35 @@ export const insertQueueSchema = createInsertSchema(queue).omit({ id: true, user
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, userId: true, createdAt: true });
 export const insertGallerySchema = createInsertSchema(gallery).omit({ id: true, userId: true, createdAt: true });
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, userId: true, createdAt: true });
+export const insertBarberSchema = createInsertSchema(barbers).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
+
+// Onboarding schema
+export const onboardingSchema = z.object({
+  barbershopName: z.string().min(1, "Business name is required"),
+  address: z.string().min(1, "Address is required"),
+  phone: z.string().min(1, "Phone number is required"),
+  bookingStyle: z.enum(["appointment", "walk-in", "both"]),
+  primaryColor: z.string().min(1, "Primary color is required"),
+  secondaryColor: z.string().min(1, "Secondary color is required"),
+  logoUrl: z.string().optional(),
+  businessHours: z.object({
+    monday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    tuesday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    wednesday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    thursday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    friday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    saturday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    sunday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+  }),
+  barbers: z.array(z.object({
+    name: z.string().min(1, "Barber name is required"),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    specialties: z.array(z.string()).default([]),
+    bio: z.string().optional(),
+    experience: z.number().optional(),
+  })).min(1, "At least one barber is required"),
+});
 
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -230,3 +288,6 @@ export type InsertGallery = z.infer<typeof insertGallerySchema>;
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type TransactionItem = typeof transactionItems.$inferSelect;
+export type Barber = typeof barbers.$inferSelect;
+export type InsertBarber = z.infer<typeof insertBarberSchema>;
+export type OnboardingData = z.infer<typeof onboardingSchema>;
