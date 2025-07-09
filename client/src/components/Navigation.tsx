@@ -125,7 +125,7 @@ export default function Navigation() {
                     <div 
                       className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors cursor-pointer ${
                         isActiveRoute(item.href) 
-                          ? 'text-primary bg-blue-50' 
+                          ? 'text-primary bg-primary/10' 
                           : 'text-gray-600 hover:text-primary hover:bg-gray-50'
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}

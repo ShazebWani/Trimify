@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { onboardingSchema, type OnboardingData } from "@shared/schema";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Plus, X, Scissors, Palette, Clock, Users, CheckCircle } from "lucide-react";
 
 const defaultBusinessHours = {
@@ -38,6 +39,7 @@ export default function Onboarding() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { applyTheme } = useTheme();
 
   const form = useForm<OnboardingData>({
     resolver: zodResolver(onboardingSchema),
@@ -303,11 +305,19 @@ export default function Onboarding() {
                                   {...field}
                                   type="color"
                                   className="w-20 h-10 p-1 border rounded"
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    applyTheme(e.target.value, form.watch("secondaryColor"));
+                                  }}
                                 />
                                 <Input
                                   {...field}
                                   placeholder="#3b82f6"
                                   className="flex-1"
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    applyTheme(e.target.value, form.watch("secondaryColor"));
+                                  }}
                                 />
                               </div>
                             </FormControl>
@@ -329,11 +339,19 @@ export default function Onboarding() {
                                   {...field}
                                   type="color"
                                   className="w-20 h-10 p-1 border rounded"
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    applyTheme(form.watch("primaryColor"), e.target.value);
+                                  }}
                                 />
                                 <Input
                                   {...field}
                                   placeholder="#1e40af"
                                   className="flex-1"
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    applyTheme(form.watch("primaryColor"), e.target.value);
+                                  }}
                                 />
                               </div>
                             </FormControl>
@@ -362,19 +380,32 @@ export default function Onboarding() {
                     />
 
                     <div className="p-4 bg-gray-50 rounded-lg">
-                      <h3 className="font-medium mb-2">Preview</h3>
-                      <div className="flex items-center space-x-2">
-                        <div
-                          className="w-8 h-8 rounded"
-                          style={{ backgroundColor: form.watch("primaryColor") }}
-                        />
-                        <div
-                          className="w-8 h-8 rounded"
-                          style={{ backgroundColor: form.watch("secondaryColor") }}
-                        />
-                        <span className="text-sm text-gray-600">
-                          Your brand colors
-                        </span>
+                      <h3 className="font-medium mb-3">Live Preview</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className="w-8 h-8 rounded"
+                            style={{ backgroundColor: form.watch("primaryColor") }}
+                          />
+                          <div
+                            className="w-8 h-8 rounded"
+                            style={{ backgroundColor: form.watch("secondaryColor") }}
+                          />
+                          <span className="text-sm text-gray-600">
+                            Your brand colors
+                          </span>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button size="sm" className="bg-primary hover:bg-primary/90">
+                            Primary Button
+                          </Button>
+                          <Button size="sm" variant="secondary">
+                            Secondary Button
+                          </Button>
+                        </div>
+                        <div className="p-2 border rounded bg-accent text-accent-foreground">
+                          <p className="text-sm">This is how your content will look with your brand colors</p>
+                        </div>
                       </div>
                     </div>
                   </div>

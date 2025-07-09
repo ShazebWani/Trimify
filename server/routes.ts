@@ -31,6 +31,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding routes
+  app.get('/api/onboarding/subdomain-check', async (req, res) => {
+    try {
+      const { businessName } = req.query;
+      if (!businessName) {
+        return res.status(400).json({ error: 'Business name is required' });
+      }
+      
+      const subdomain = await storage.generateSubdomain(businessName as string);
+      res.json({ subdomain });
+    } catch (error) {
+      console.error("Error generating subdomain:", error);
+      res.status(500).json({ message: "Failed to generate subdomain" });
+    }
+  });
+
+  app.post('/api/onboarding', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const onboardingData = req.body;
+      
+      const user = await storage.completeOnboarding(userId, onboardingData);
+      res.json(user);
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
   // Dashboard stats
   app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
     try {

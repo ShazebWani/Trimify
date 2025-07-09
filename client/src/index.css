@@ -98,6 +98,31 @@
     background-color: var(--error);
   }
   
+  /* Dynamic theme utility classes */
+  .bg-brand-primary {
+    background-color: hsl(var(--primary));
+  }
+  
+  .text-brand-primary {
+    color: hsl(var(--primary));
+  }
+  
+  .border-brand-primary {
+    border-color: hsl(var(--primary));
+  }
+  
+  .bg-brand-secondary {
+    background-color: hsl(var(--secondary));
+  }
+  
+  .text-brand-secondary {
+    color: hsl(var(--secondary));
+  }
+  
+  .border-brand-secondary {
+    border-color: hsl(var(--secondary));
+  }
+  
   .border-primary-custom {
     border-color: var(--primary);
   }
