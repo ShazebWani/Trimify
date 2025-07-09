@@ -92,11 +92,11 @@ export default function QueueManagement() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'in_progress':
-        return 'bg-green-100 text-green-800';
+        return 'bg-primary/20 text-primary';
       case 'waiting':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-secondary/20 text-secondary';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -120,8 +120,8 @@ export default function QueueManagement() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Current Queue</CardTitle>
-            <Button onClick={() => setIsBookingModalOpen(true)}>
+            <CardTitle className="text-primary">Current Queue</CardTitle>
+            <Button onClick={() => setIsBookingModalOpen(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg">
               <Plus className="h-4 w-4 mr-2" />
               Add Walk-in
             </Button>

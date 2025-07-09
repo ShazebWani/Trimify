@@ -69,9 +69,9 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Dashboard Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-primary mb-2">Dashboard</h1>
           <p className="text-gray-600">
-            Welcome back! Here's what's happening at {user?.barbershopName || 'your barbershop'} today.
+            Welcome back! Here's what's happening at <span className="font-semibold text-primary">{user?.barbershopName || 'your barbershop'}</span> today.
           </p>
         </div>
 
@@ -86,8 +86,8 @@ export default function Dashboard() {
                     {statsLoading ? "..." : stats?.todayQueueCount || 0}
                   </p>
                 </div>
-                <div className="bg-blue-100 rounded-full p-3">
-                  <Users className="h-5 w-5 text-blue-600" />
+                <div className="bg-primary/10 rounded-full p-3">
+                  <Users className="h-5 w-5 text-primary" />
                 </div>
               </div>
               <div className="mt-4 flex items-center">
@@ -106,8 +106,8 @@ export default function Dashboard() {
                     {statsLoading ? "..." : stats?.todayAppointmentCount || 0}
                   </p>
                 </div>
-                <div className="bg-green-100 rounded-full p-3">
-                  <Calendar className="h-5 w-5 text-green-600" />
+                <div className="bg-secondary/20 rounded-full p-3">
+                  <Calendar className="h-5 w-5 text-secondary" />
                 </div>
               </div>
               <div className="mt-4 flex items-center">
@@ -126,8 +126,8 @@ export default function Dashboard() {
                     {statsLoading ? "..." : `${stats?.averageWaitTime || 0} min`}
                   </p>
                 </div>
-                <div className="bg-orange-100 rounded-full p-3">
-                  <Clock className="h-5 w-5 text-orange-600" />
+                <div className="bg-primary/20 rounded-full p-3">
+                  <Clock className="h-5 w-5 text-primary" />
                 </div>
               </div>
               <div className="mt-4 flex items-center">
@@ -146,8 +146,8 @@ export default function Dashboard() {
                     {statsLoading ? "..." : `$${stats?.todayRevenue || 0}`}
                   </p>
                 </div>
-                <div className="bg-green-100 rounded-full p-3">
-                  <DollarSign className="h-5 w-5 text-green-600" />
+                <div className="bg-secondary/20 rounded-full p-3">
+                  <DollarSign className="h-5 w-5 text-secondary" />
                 </div>
               </div>
               <div className="mt-4 flex items-center">
@@ -168,7 +168,7 @@ export default function Dashboard() {
           <div>
             <Card>
               <CardHeader>
-                <CardTitle>Today's Appointments</CardTitle>
+                <CardTitle className="text-primary">Today's Appointments</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -218,19 +218,19 @@ export default function Dashboard() {
           {/* Quick Actions */}
           <Card>
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle className="text-primary">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Button className="w-full" variant="default">
+                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg">
                   <Plus className="h-4 w-4 mr-2" />
                   New Appointment
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-lg">
                   <Users className="h-4 w-4 mr-2" />
                   Add Customer
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button className="w-full border-primary text-primary hover:bg-primary/10 rounded-lg" variant="outline">
                   <Star className="h-4 w-4 mr-2" />
                   Manage Gallery
                 </Button>
@@ -241,7 +241,7 @@ export default function Dashboard() {
           {/* Recent Reviews */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Reviews</CardTitle>
+              <CardTitle className="text-secondary">Recent Reviews</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">

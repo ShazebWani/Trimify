@@ -58,7 +58,7 @@ export default function Navigation() {
                 ) : (
                   <Scissors className="h-6 w-6 text-primary mr-3" />
                 )}
-                <span className="text-xl font-bold text-gray-900">
+                <span className="text-xl font-bold text-primary">
                   {user?.barbershopName || 'Trimify'}
                 </span>
                 <Badge variant="secondary" className="ml-2">Pro</Badge>
@@ -82,9 +82,9 @@ export default function Navigation() {
 
             {/* User Profile */}
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
                 <Bell className="h-4 w-4" />
-                <Badge variant="destructive" className="ml-1 px-1 h-5 w-5 flex items-center justify-center text-xs">
+                <Badge className="ml-1 px-1 h-5 w-5 flex items-center justify-center text-xs bg-primary text-primary-foreground">
                   3
                 </Badge>
               </Button>

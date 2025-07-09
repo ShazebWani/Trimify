@@ -7,6 +7,7 @@ This is a comprehensive barbershop management platform built with React, Express
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Theme visibility: Theme colors should be highly visible throughout the interface, with primary colors for barbershop names and important buttons with rounded backgrounds, and secondary colors for supporting text.
 
 ## System Architecture
 
@@ -127,3 +128,15 @@ The system uses a comprehensive PostgreSQL schema with the following main entiti
 - Stateless authentication with session storage
 - Client-side caching reduces server load
 - Optimized bundle sizes for faster loading
+
+## Recent Changes
+
+### January 2025
+- **Enhanced Theme Visibility**: Made theme colors highly visible throughout the interface
+  - Barbershop names display in primary color in navigation and dashboard
+  - Action buttons use primary color backgrounds with rounded corners
+  - Dashboard stats cards use primary/secondary color icons and backgrounds
+  - Queue management components styled with theme colors
+  - Card titles throughout the app use primary/secondary colors
+- **Navigation Improvements**: Fixed nested anchor tag warnings and improved branding display
+- **White-label Branding**: Barbershop name displayed instead of "Trimify" throughout the interface
