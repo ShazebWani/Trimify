@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Navigation from "@/components/Navigation";
@@ -14,31 +18,91 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
   Settings as SettingsIcon, 
   User, 
   Store, 
   Palette, 
   Bell,
   Shield,
-  CreditCard,
   Save,
   Plus,
-  Trash2
+  Trash2,
+  Upload,
+  Clock,
+  MapPin,
+  Phone,
+  Mail,
+  Globe
 } from "lucide-react";
 
+const profileSchema = z.object({
+  barbershopName: z.string().min(1, "Barbershop name is required"),
+  phone: z.string().min(1, "Phone number is required"),
+  address: z.string().min(1, "Address is required"),
+  primaryColor: z.string().min(1, "Primary color is required"),
+  secondaryColor: z.string().min(1, "Secondary color is required"),
+  bookingStyle: z.enum(["appointment", "walk-in", "both"]),
+  logoUrl: z.string().optional(),
+});
+
+const businessHoursSchema = z.object({
+  monday: z.object({ open: z.string(), close: z.string(), isOpen: z.boolean() }),
+  tuesday: z.object({ open: z.string(), close: z.string(), isOpen: z.boolean() }),
+  wednesday: z.object({ open: z.string(), close: z.string(), isOpen: z.boolean() }),
+  thursday: z.object({ open: z.string(), close: z.string(), isOpen: z.boolean() }),
+  friday: z.object({ open: z.string(), close: z.string(), isOpen: z.boolean() }),
+  saturday: z.object({ open: z.string(), close: z.string(), isOpen: z.boolean() }),
+  sunday: z.object({ open: z.string(), close: z.string(), isOpen: z.boolean() }),
+});
+
+type ProfileFormData = z.infer<typeof profileSchema>;
+type BusinessHoursData = z.infer<typeof businessHoursSchema>;
+
 export default function Settings() {
-  const [barbershopName, setBarbershopName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [notifications, setNotifications] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [smsNotifications, setSmsNotifications] = useState(false);
-  const [services, setServices] = useState<any[]>([]);
-  const [newService, setNewService] = useState({ name: "", price: "", duration: "" });
+  const [activeTab, setActiveTab] = useState("profile");
+  const [primaryColorPreview, setPrimaryColorPreview] = useState("#3b82f6");
+  const [secondaryColorPreview, setSecondaryColorPreview] = useState("#1e40af");
   
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { applyTheme } = useTheme();
   const queryClient = useQueryClient();
+
+  const profileForm = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      barbershopName: "",
+      phone: "",
+      address: "",
+      primaryColor: "#3b82f6",
+      secondaryColor: "#1e40af",
+      bookingStyle: "both",
+      logoUrl: "",
+    },
+  });
+
+  const businessHoursForm = useForm<BusinessHoursData>({
+    resolver: zodResolver(businessHoursSchema),
+    defaultValues: {
+      monday: { open: "09:00", close: "18:00", isOpen: true },
+      tuesday: { open: "09:00", close: "18:00", isOpen: true },
+      wednesday: { open: "09:00", close: "18:00", isOpen: true },
+      thursday: { open: "09:00", close: "18:00", isOpen: true },
+      friday: { open: "09:00", close: "20:00", isOpen: true },
+      saturday: { open: "08:00", close: "19:00", isOpen: true },
+      sunday: { open: "10:00", close: "16:00", isOpen: false },
+    },
+  });
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -55,36 +119,38 @@ export default function Settings() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: servicesData } = useQuery({
-    queryKey: ["/api/services"],
-    enabled: isAuthenticated,
-  });
-
+  // Populate form with user data
   useEffect(() => {
     if (user) {
-      setBarbershopName(user.barbershopName || "");
-      setPhone(user.phone || "");
-      setAddress(user.address || "");
-    }
-  }, [user]);
+      profileForm.reset({
+        barbershopName: user.barbershopName || "",
+        phone: user.phone || "",
+        address: user.address || "",
+        primaryColor: user.primaryColor || "#3b82f6",
+        secondaryColor: user.secondaryColor || "#1e40af",
+        bookingStyle: user.bookingStyle || "both",
+        logoUrl: user.logoUrl || "",
+      });
+      setPrimaryColorPreview(user.primaryColor || "#3b82f6");
+      setSecondaryColorPreview(user.secondaryColor || "#1e40af");
 
-  useEffect(() => {
-    if (servicesData) {
-      setServices(servicesData);
+      if (user.businessHours) {
+        businessHoursForm.reset(user.businessHours);
+      }
     }
-  }, [servicesData]);
+  }, [user, profileForm, businessHoursForm]);
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: any) => {
-      // Since we don't have a user update endpoint, we'll simulate it
-      // In a real app, this would be an API call to update user profile
-      return Promise.resolve();
+    mutationFn: async (data: ProfileFormData) => {
+      return await apiRequest("PUT", "/api/user/profile", data);
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
       });
+      queryClient.setQueryData(["/api/auth/user"], updatedUser);
+      applyTheme(updatedUser.primaryColor, updatedUser.secondaryColor);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -100,23 +166,22 @@ export default function Settings() {
       }
       toast({
         title: "Error",
-        description: "Failed to update profile.",
+        description: "Failed to update profile. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const createServiceMutation = useMutation({
-    mutationFn: async (data: any) => {
-      await apiRequest("POST", "/api/services", data);
+  const updateBusinessHoursMutation = useMutation({
+    mutationFn: async (data: BusinessHoursData) => {
+      return await apiRequest("PUT", "/api/user/profile", { businessHours: data });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       toast({
-        title: "Service added",
-        description: "New service has been added successfully.",
+        title: "Business hours updated",
+        description: "Your business hours have been updated successfully.",
       });
-      setNewService({ name: "", price: "", duration: "" });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -132,68 +197,39 @@ export default function Settings() {
       }
       toast({
         title: "Error",
-        description: "Failed to add service.",
+        description: "Failed to update business hours. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const deleteServiceMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/services/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-      toast({
-        title: "Service deleted",
-        description: "Service has been deleted successfully.",
-      });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to delete service.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSaveProfile = () => {
-    updateProfileMutation.mutate({
-      barbershopName,
-      phone,
-      address,
-    });
+  const onProfileSubmit = (data: ProfileFormData) => {
+    updateProfileMutation.mutate(data);
   };
 
-  const handleAddService = () => {
-    if (!newService.name || !newService.price || !newService.duration) {
-      toast({
-        title: "Error",
-        description: "Please fill in all service fields.",
-        variant: "destructive",
-      });
-      return;
+  const onBusinessHoursSubmit = (data: BusinessHoursData) => {
+    updateBusinessHoursMutation.mutate(data);
+  };
+
+  const handleColorPreview = (color: string, type: 'primary' | 'secondary') => {
+    if (type === 'primary') {
+      setPrimaryColorPreview(color);
+      applyTheme(color, secondaryColorPreview);
+    } else {
+      setSecondaryColorPreview(color);
+      applyTheme(primaryColorPreview, color);
     }
-
-    createServiceMutation.mutate({
-      name: newService.name,
-      price: parseFloat(newService.price),
-      duration: parseInt(newService.duration),
-      description: "",
-    });
   };
+
+  const daysOfWeek = [
+    { key: 'monday', label: 'Monday' },
+    { key: 'tuesday', label: 'Tuesday' },
+    { key: 'wednesday', label: 'Wednesday' },
+    { key: 'thursday', label: 'Thursday' },
+    { key: 'friday', label: 'Friday' },
+    { key: 'saturday', label: 'Saturday' },
+    { key: 'sunday', label: 'Sunday' },
+  ];
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -207,282 +243,417 @@ export default function Settings() {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Settings</h1>
-          <p className="text-gray-600">Manage your barbershop settings and preferences</p>
+          <h1 className="text-2xl font-bold text-primary mb-2">Settings</h1>
+          <p className="text-gray-600">Customize your barbershop profile, colors, and preferences.</p>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="profile" className="flex items-center space-x-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
-            </TabsTrigger>
-            <TabsTrigger value="business" className="flex items-center space-x-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="profile" className="flex items-center gap-2">
               <Store className="h-4 w-4" />
-              <span className="hidden sm:inline">Business</span>
+              Profile
             </TabsTrigger>
-            <TabsTrigger value="services" className="flex items-center space-x-2">
-              <SettingsIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Services</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center space-x-2">
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notifications</span>
-            </TabsTrigger>
-            <TabsTrigger value="appearance" className="flex items-center space-x-2">
+            <TabsTrigger value="appearance" className="flex items-center gap-2">
               <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">Appearance</span>
+              Appearance
+            </TabsTrigger>
+            <TabsTrigger value="hours" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Business Hours
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notifications
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile">
+          <TabsContent value="profile" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
+                <CardTitle className="text-primary">Business Profile</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={user?.firstName || ""}
-                      readOnly
-                      className="bg-gray-50"
+              <CardContent>
+                <Form {...profileForm}>
+                  <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={profileForm.control}
+                        name="barbershopName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Barbershop Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter your barbershop name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={profileForm.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="(555) 123-4567" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={profileForm.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Enter your complete business address" 
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={user?.lastName || ""}
-                      readOnly
-                      className="bg-gray-50"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={user?.email || ""}
-                    readOnly
-                    className="bg-gray-50"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Enter phone number"
-                  />
-                </div>
-                <Button onClick={handleSaveProfile} disabled={updateProfileMutation.isPending}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Profile
-                </Button>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={profileForm.control}
+                        name="bookingStyle"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Booking Style</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select booking style" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="appointment">Appointment Only</SelectItem>
+                                <SelectItem value="walk-in">Walk-in Only</SelectItem>
+                                <SelectItem value="both">Both</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={profileForm.control}
+                        name="logoUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Logo URL (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="https://example.com/logo.png" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Upload your logo to an image hosting service and paste the URL here.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="pt-4">
+                      <Button 
+                        type="submit" 
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                        disabled={updateProfileMutation.isPending}
+                      >
+                        {updateProfileMutation.isPending ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Save Profile
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="business">
+          <TabsContent value="appearance" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Business Information</CardTitle>
+                <CardTitle className="text-primary">Brand Colors</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label htmlFor="barbershopName">Barbershop Name</Label>
-                  <Input
-                    id="barbershopName"
-                    value={barbershopName}
-                    onChange={(e) => setBarbershopName(e.target.value)}
-                    placeholder="Enter barbershop name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Enter business address"
-                    rows={3}
-                  />
-                </div>
-                <Button onClick={handleSaveProfile} disabled={updateProfileMutation.isPending}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Business Info
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              <CardContent>
+                <Form {...profileForm}>
+                  <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={profileForm.control}
+                        name="primaryColor"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Primary Color</FormLabel>
+                            <FormDescription>
+                              Used for barbershop name, main buttons, and key UI elements.
+                            </FormDescription>
+                            <FormControl>
+                              <div className="flex items-center gap-3">
+                                <Input
+                                  type="color"
+                                  className="w-16 h-10 p-1 rounded border"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    handleColorPreview(e.target.value, 'primary');
+                                  }}
+                                />
+                                <Input
+                                  type="text"
+                                  placeholder="#3b82f6"
+                                  className="flex-1"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    handleColorPreview(e.target.value, 'primary');
+                                  }}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={profileForm.control}
+                        name="secondaryColor"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Secondary Color</FormLabel>
+                            <FormDescription>
+                              Used for supporting text, icons, and accent elements.
+                            </FormDescription>
+                            <FormControl>
+                              <div className="flex items-center gap-3">
+                                <Input
+                                  type="color"
+                                  className="w-16 h-10 p-1 rounded border"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    handleColorPreview(e.target.value, 'secondary');
+                                  }}
+                                />
+                                <Input
+                                  type="text"
+                                  placeholder="#1e40af"
+                                  className="flex-1"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    handleColorPreview(e.target.value, 'secondary');
+                                  }}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
-          <TabsContent value="services">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Add New Service</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="serviceName">Service Name</Label>
-                      <Input
-                        id="serviceName"
-                        value={newService.name}
-                        onChange={(e) => setNewService({...newService, name: e.target.value})}
-                        placeholder="e.g., Haircut"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="servicePrice">Price ($)</Label>
-                      <Input
-                        id="servicePrice"
-                        type="number"
-                        value={newService.price}
-                        onChange={(e) => setNewService({...newService, price: e.target.value})}
-                        placeholder="25.00"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="serviceDuration">Duration (min)</Label>
-                      <Input
-                        id="serviceDuration"
-                        type="number"
-                        value={newService.duration}
-                        onChange={(e) => setNewService({...newService, duration: e.target.value})}
-                        placeholder="30"
-                      />
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={handleAddService} 
-                    className="mt-4"
-                    disabled={createServiceMutation.isPending}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Service
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Current Services</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {services.map((service: any) => (
-                      <div key={service.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div>
-                          <h3 className="font-medium text-gray-900">{service.name}</h3>
-                          <p className="text-sm text-gray-600">
-                            ${service.price} • {service.duration} minutes
-                          </p>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-medium text-gray-900 mb-3">Preview</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded-full border"
+                            style={{ backgroundColor: primaryColorPreview }}
+                          ></div>
+                          <span style={{ color: primaryColorPreview }} className="font-semibold">
+                            {user?.barbershopName || 'Your Barbershop'}
+                          </span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteServiceMutation.mutate(service.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <button 
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{ backgroundColor: primaryColorPreview }}
+                          >
+                            Primary Button
+                          </button>
+                          <button 
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{ backgroundColor: secondaryColorPreview }}
+                          >
+                            Secondary Button
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <Button 
+                        type="submit" 
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                        disabled={updateProfileMutation.isPending}
+                      >
+                        {updateProfileMutation.isPending ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Save Colors
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="hours" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-primary">Business Hours</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Form {...businessHoursForm}>
+                  <form onSubmit={businessHoursForm.handleSubmit(onBusinessHoursSubmit)} className="space-y-4">
+                    {daysOfWeek.map((day) => (
+                      <div key={day.key} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div className="w-20 font-medium text-gray-900">
+                          {day.label}
+                        </div>
+                        
+                        <FormField
+                          control={businessHoursForm.control}
+                          name={`${day.key as keyof BusinessHoursData}.isOpen`}
+                          render={({ field }) => (
+                            <FormItem className="flex items-center gap-2">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="flex items-center gap-2 flex-1">
+                          <FormField
+                            control={businessHoursForm.control}
+                            name={`${day.key as keyof BusinessHoursData}.open`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input
+                                    type="time"
+                                    className="w-32"
+                                    {...field}
+                                    disabled={!businessHoursForm.watch(`${day.key as keyof BusinessHoursData}.isOpen`)}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <span className="text-gray-500">to</span>
+                          <FormField
+                            control={businessHoursForm.control}
+                            name={`${day.key as keyof BusinessHoursData}.close`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input
+                                    type="time"
+                                    className="w-32"
+                                    {...field}
+                                    disabled={!businessHoursForm.watch(`${day.key as keyof BusinessHoursData}.isOpen`)}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
                     ))}
-                    {services.length === 0 && (
-                      <p className="text-center text-gray-500 py-8">No services added yet</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="notifications">Push Notifications</Label>
-                    <p className="text-sm text-gray-600">Receive notifications for new appointments and queue updates</p>
-                  </div>
-                  <Switch
-                    id="notifications"
-                    checked={notifications}
-                    onCheckedChange={setNotifications}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="emailNotifications">Email Notifications</Label>
-                    <p className="text-sm text-gray-600">Get email updates for important events</p>
-                  </div>
-                  <Switch
-                    id="emailNotifications"
-                    checked={emailNotifications}
-                    onCheckedChange={setEmailNotifications}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="smsNotifications">SMS Notifications</Label>
-                    <p className="text-sm text-gray-600">Receive text messages for urgent updates</p>
-                  </div>
-                  <Switch
-                    id="smsNotifications"
-                    checked={smsNotifications}
-                    onCheckedChange={setSmsNotifications}
-                  />
-                </div>
+                    <div className="pt-4">
+                      <Button 
+                        type="submit" 
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                        disabled={updateBusinessHoursMutation.isPending}
+                      >
+                        {updateBusinessHoursMutation.isPending ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Save Hours
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="appearance">
+          <TabsContent value="notifications" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Appearance Settings</CardTitle>
+                <CardTitle className="text-primary">Notification Preferences</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label>Theme</Label>
-                  <p className="text-sm text-gray-600 mb-4">Choose your preferred color scheme</p>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="p-4 border rounded-lg cursor-pointer hover:border-primary">
-                      <div className="w-full h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded mb-2"></div>
-                      <p className="text-sm font-medium">Default Blue</p>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="email-notifications">Email Notifications</Label>
+                      <p className="text-sm text-gray-600">
+                        Receive notifications about appointments and bookings via email.
+                      </p>
                     </div>
-                    <div className="p-4 border rounded-lg cursor-pointer hover:border-primary">
-                      <div className="w-full h-20 bg-gradient-to-br from-green-500 to-green-600 rounded mb-2"></div>
-                      <p className="text-sm font-medium">Fresh Green</p>
-                    </div>
-                    <div className="p-4 border rounded-lg cursor-pointer hover:border-primary">
-                      <div className="w-full h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded mb-2"></div>
-                      <p className="text-sm font-medium">Royal Purple</p>
-                    </div>
+                    <Switch id="email-notifications" />
                   </div>
-                </div>
-                <Separator />
-                <div>
-                  <Label htmlFor="logo">Logo URL</Label>
-                  <p className="text-sm text-gray-600 mb-2">Enter a URL for your barbershop logo</p>
-                  <Input
-                    id="logo"
-                    placeholder="https://example.com/logo.png"
-                  />
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="sms-notifications">SMS Notifications</Label>
+                      <p className="text-sm text-gray-600">
+                        Get instant SMS alerts for important updates.
+                      </p>
+                    </div>
+                    <Switch id="sms-notifications" />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="marketing-notifications">Marketing Updates</Label>
+                      <p className="text-sm text-gray-600">
+                        Receive updates about new features and promotions.
+                      </p>
+                    </div>
+                    <Switch id="marketing-notifications" />
+                  </div>
+
+                  <div className="pt-4">
+                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg">
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Preferences
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

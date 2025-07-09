@@ -101,6 +101,9 @@ export interface IStorage {
   // Onboarding operations
   completeOnboarding(userId: string, data: OnboardingData): Promise<User>;
   generateSubdomain(businessName: string): Promise<string>;
+  
+  // Settings operations
+  updateUserProfile(userId: string, data: Partial<UpsertUser>): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -533,6 +536,18 @@ export class DatabaseStorage implements IStorage {
     }
     
     return subdomain;
+  }
+
+  async updateUserProfile(userId: string, data: Partial<UpsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 }
 
